@@ -180,7 +180,12 @@ router.get('/post/:postId', async (req, res) => {
     const getParentId = (comment) => {
       if (!comment.parentComment) return null;
       if (typeof comment.parentComment === 'string') return comment.parentComment;
-      return comment.parentComment._id || comment.parentComment.id || null;
+      if (comment.parentComment._id) return comment.parentComment._id.toString();
+      if (comment.parentComment.id) return comment.parentComment.id.toString();
+      if (typeof comment.parentComment.toString === 'function') {
+        return comment.parentComment.toString();
+      }
+      return null;
     };
 
     const roots = [];
