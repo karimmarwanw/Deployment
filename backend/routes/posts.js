@@ -291,6 +291,51 @@ router.get('/', async (req, res) => {
   }
 });
 
+// @route   GET /api/posts/:id/votes
+// @desc    Get voters for a post (post author only)
+// @access  Private
+router.get('/:id/votes', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id).select('author');
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    if (post.author.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to view voters' });
+    }
+
+    const votes = await Vote.find({ post: req.params.id })
+      .populate('user', 'username avatar')
+      .sort({ createdAt: -1 });
+
+    const upvotes = [];
+    const downvotes = [];
+    votes.forEach(vote => {
+      const entry = {
+        _id: vote.user?._id,
+        username: vote.user?.username,
+        avatar: vote.user?.avatar,
+        voteType: vote.voteType,
+        createdAt: vote.createdAt
+      };
+      if (vote.voteType === 'upvote') {
+        upvotes.push(entry);
+      } else {
+        downvotes.push(entry);
+      }
+    });
+
+    res.json({
+      upvotes,
+      downvotes
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/posts/:id
 // @desc    Get a single post
 // @access  Public

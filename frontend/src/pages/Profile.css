@@ -346,6 +346,43 @@
   box-shadow: var(--shadow-sm);
 }
 
+.community-card-compact {
+  padding: var(--spacing-md);
+}
+
+.community-card-link {
+  text-decoration: none;
+}
+
+.community-card-display {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  margin: 4px 0 0 0;
+}
+
+.community-card-actions {
+  margin-top: var(--spacing-md);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.community-leave-button {
+  background-color: transparent;
+  color: var(--accent-red);
+  border: 1px solid var(--accent-red);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.community-leave-button:hover {
+  background-color: var(--accent-red);
+  color: white;
+}
+
 .community-card::before {
   content: '';
   position: absolute;

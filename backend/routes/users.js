@@ -11,6 +11,7 @@ const FavoriteCommunity = require('../models/FavoriteCommunity');
 const HiddenPost = require('../models/HiddenPost');
 const Following = require('../models/Following');
 const Blocking = require('../models/Blocking');
+const Community = require('../models/Community');
 const optionalAuth = require('../middleware/optionalAuth');
 const { body, validationResult } = require('express-validator');
 const { upload, uploadToCloudinary } = require('../utils/cloudinary');
@@ -139,6 +140,43 @@ router.get('/:id/communities/favorites', async (req, res) => {
       .sort({ createdAt: -1 });
     
     const communities = favoriteCommunities.map(fc => fc.community).filter(Boolean);
+    res.json(communities);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/:id/communities/joined
+// @desc    Get all joined communities by a user
+// @access  Public
+router.get('/:id/communities/joined', async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('joinedCommunities');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const communities = await Community.find({ _id: { $in: user.joinedCommunities } })
+      .select('name displayName description memberCount creator')
+      .sort({ createdAt: -1 });
+
+    res.json(communities);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/:id/communities/created
+// @desc    Get all communities created by a user
+// @access  Public
+router.get('/:id/communities/created', async (req, res) => {
+  try {
+    const communities = await Community.find({ creator: req.params.id })
+      .select('name displayName description memberCount')
+      .sort({ createdAt: -1 });
+
     res.json(communities);
   } catch (error) {
     console.error(error);

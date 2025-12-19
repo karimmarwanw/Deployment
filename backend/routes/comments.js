@@ -128,10 +128,6 @@ router.post('/', auth, [
 // @access  Public
 router.get('/post/:postId', async (req, res) => {
   try {
-    let comments = await Comment.find({ post: req.params.postId, parentComment: null })
-      .populate('author', 'username karma')
-      .sort({ score: -1, createdAt: -1 });
-
     // Get userId from token if available
     let userId = null;
     if (req.headers.authorization) {
@@ -140,42 +136,12 @@ router.get('/post/:postId', async (req, res) => {
         const jwt = require('jsonwebtoken');
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         userId = decoded.userId;
-        
-        // Filter out comments from blocked users
-        if (userId) {
-          const blockingRelations = await Blocking.find({
-            $or: [
-              { blocker: userId },
-              { blocked: userId }
-            ]
-          });
-          
-          const blockedUserIds = new Set();
-          blockingRelations.forEach(block => {
-            if (block.blocker.toString() === userId) {
-              blockedUserIds.add(block.blocked.toString());
-            } else {
-              blockedUserIds.add(block.blocker.toString());
-            }
-          });
-          
-          // Filter comments by excluding those from blocked users
-          comments = comments.filter(comment => {
-            const authorId = comment.author._id.toString();
-            return !blockedUserIds.has(authorId);
-          });
-        }
       } catch (e) {
         // Invalid token, continue without userId
       }
     }
 
-    // Get all comment IDs including replies
-    const allCommentIds = [...comments.map(c => c._id.toString())];
-    let allReplies = await Comment.find({ post: req.params.postId, parentComment: { $ne: null } })
-      .populate('author', 'username karma');
-    
-    // Filter replies from blocked users if user is authenticated
+    let blockedUserIds = new Set();
     if (userId) {
       const blockingRelations = await Blocking.find({
         $or: [
@@ -184,7 +150,6 @@ router.get('/post/:postId', async (req, res) => {
         ]
       });
       
-      const blockedUserIds = new Set();
       blockingRelations.forEach(block => {
         if (block.blocker.toString() === userId) {
           blockedUserIds.add(block.blocked.toString());
@@ -192,58 +157,57 @@ router.get('/post/:postId', async (req, res) => {
           blockedUserIds.add(block.blocker.toString());
         }
       });
-      
-      // Filter replies by excluding those from blocked users
-      allReplies = allReplies.filter(reply => {
-        const authorId = reply.author._id.toString();
-        return !blockedUserIds.has(authorId);
-      });
     }
-    
-    allCommentIds.push(...allReplies.map(r => r._id.toString()));
 
-    // Enrich comments with votes
-    const enrichedComments = await enrichCommentsWithVotes(comments, userId);
+    let comments = await Comment.find({ post: req.params.postId })
+      .populate('author', 'username karma')
+      .sort({ score: -1, createdAt: -1 });
 
-    // Get replies for each comment and enrich them too
-    let blockedUserIdsForReplies = new Set();
-    if (userId) {
-      const blockingRelationsForReplies = await Blocking.find({
-        $or: [
-          { blocker: userId },
-          { blocked: userId }
-        ]
-      });
-      
-      blockingRelationsForReplies.forEach(block => {
-        if (block.blocker.toString() === userId) {
-          blockedUserIdsForReplies.add(block.blocked.toString());
-        } else {
-          blockedUserIdsForReplies.add(block.blocker.toString());
-        }
+    if (blockedUserIds.size > 0) {
+      comments = comments.filter(comment => {
+        const authorId = comment.author?._id?.toString();
+        return authorId && !blockedUserIds.has(authorId);
       });
     }
 
-    const commentsWithReplies = await Promise.all(
-      enrichedComments.map(async (comment) => {
-        let replies = await Comment.find({ parentComment: comment._id })
-          .populate('author', 'username karma')
-          .sort({ score: -1, createdAt: -1 });
-        
-        // Filter replies from blocked users
-        if (userId && blockedUserIdsForReplies.size > 0) {
-          replies = replies.filter(reply => {
-            const authorId = reply.author._id.toString();
-            return !blockedUserIdsForReplies.has(authorId);
-          });
-        }
-        
-        const enrichedReplies = await enrichCommentsWithVotes(replies, userId);
-        return { ...comment, replies: enrichedReplies };
-      })
-    );
+    const enriched = await enrichCommentsWithVotes(comments, userId);
 
-    res.json(commentsWithReplies);
+    const commentMap = new Map();
+    enriched.forEach(comment => {
+      commentMap.set(comment._id.toString(), { ...comment, replies: [] });
+    });
+
+    const getParentId = (comment) => {
+      if (!comment.parentComment) return null;
+      if (typeof comment.parentComment === 'string') return comment.parentComment;
+      return comment.parentComment._id || comment.parentComment.id || null;
+    };
+
+    const roots = [];
+    commentMap.forEach(comment => {
+      const parentId = getParentId(comment);
+      if (parentId && commentMap.has(parentId)) {
+        commentMap.get(parentId).replies.push(comment);
+      } else if (!parentId) {
+        roots.push(comment);
+      }
+    });
+
+    const sortTree = (nodes) => {
+      nodes.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+      nodes.forEach(node => {
+        if (node.replies && node.replies.length > 0) {
+          sortTree(node.replies);
+        }
+      });
+    };
+
+    sortTree(roots);
+
+    res.json(roots);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -443,4 +407,3 @@ router.delete('/:id', auth, async (req, res) => {
 });
 
 module.exports = router;
-

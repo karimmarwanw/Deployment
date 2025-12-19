@@ -16,6 +16,8 @@ const Profile = ({ user: currentUser }) => {
   const [upvotedPosts, setUpvotedPosts] = useState([]);
   const [downvotedPosts, setDownvotedPosts] = useState([]);
   const [favoriteCommunities, setFavoriteCommunities] = useState([]);
+  const [joinedCommunities, setJoinedCommunities] = useState([]);
+  const [createdCommunities, setCreatedCommunities] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ bio: '', avatar: '' });
@@ -93,6 +95,14 @@ const Profile = ({ user: currentUser }) => {
         case 'communities':
           const communitiesResponse = await axios.get(`/users/${userId}/communities/favorites`);
           setFavoriteCommunities(communitiesResponse.data);
+          break;
+        case 'joined-communities':
+          const joinedResponse = await axios.get(`/users/${userId}/communities/joined`);
+          setJoinedCommunities(joinedResponse.data);
+          break;
+        case 'created-communities':
+          const createdResponse = await axios.get(`/users/${userId}/communities/created`);
+          setCreatedCommunities(createdResponse.data);
           break;
         default:
           break;
@@ -374,6 +384,98 @@ const Profile = ({ user: currentUser }) => {
             )}
           </div>
         );
+      case 'joined-communities':
+        return (
+          <div className="profile-communities">
+            <h2>Joined Communities</h2>
+            {joinedCommunities.length === 0 ? (
+              <div className="no-favorite-communities">
+                <div className="empty-state-icon">👥</div>
+                <p>No joined communities yet</p>
+                <p className="empty-state-subtitle">Join communities to see them here.</p>
+              </div>
+            ) : (
+              <div className="communities-list">
+                {joinedCommunities.map(community => (
+                  <div key={community._id} className="community-card community-card-compact">
+                    <div className="community-card-header">
+                      <div style={{ flex: 1 }}>
+                        <Link to={`/r/${community.name}`} className="community-card-link">
+                          <h3>r/{community.name}</h3>
+                        </Link>
+                        {community.displayName && community.displayName !== community.name && (
+                          <p className="community-card-display">{community.displayName}</p>
+                        )}
+                      </div>
+                      <span className="community-members">
+                        {community.memberCount || 0}
+                      </span>
+                    </div>
+                    {community.description && (
+                      <p className="community-description">{community.description}</p>
+                    )}
+                    {isOwnProfile && (
+                      <div className="community-card-actions">
+                        <button
+                          className="community-leave-button"
+                          onClick={async () => {
+                            try {
+                              await axios.post(`/communities/${community.name}/leave`);
+                              setJoinedCommunities(prev => prev.filter(c => c._id !== community._id));
+                            } catch (error) {
+                              console.error('Error leaving community:', error);
+                              alert(error.response?.data?.message || 'Failed to leave community');
+                            }
+                          }}
+                        >
+                          Leave
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      case 'created-communities':
+        return (
+          <div className="profile-communities">
+            <h2>Created Communities</h2>
+            {createdCommunities.length === 0 ? (
+              <div className="no-favorite-communities">
+                <div className="empty-state-icon">🛠️</div>
+                <p>No created communities yet</p>
+                <p className="empty-state-subtitle">Create a community to see it here.</p>
+              </div>
+            ) : (
+              <div className="communities-list">
+                {createdCommunities.map(community => (
+                  <Link
+                    key={community._id}
+                    to={`/r/${community.name}`}
+                    className="community-card"
+                  >
+                    <div className="community-card-header">
+                      <div style={{ flex: 1 }}>
+                        <h3>r/{community.name}</h3>
+                        {community.displayName && community.displayName !== community.name && (
+                          <p className="community-card-display">{community.displayName}</p>
+                        )}
+                      </div>
+                      <span className="community-members">
+                        {community.memberCount || 0}
+                      </span>
+                    </div>
+                    {community.description && (
+                      <p className="community-description">{community.description}</p>
+                    )}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        );
       default:
         return null;
     }
@@ -608,6 +710,18 @@ const Profile = ({ user: currentUser }) => {
                 onClick={() => setActiveTab('communities')}
               >
                 Favorite Communities
+              </button>
+              <button
+                className={`profile-tab ${activeTab === 'joined-communities' ? 'active' : ''}`}
+                onClick={() => setActiveTab('joined-communities')}
+              >
+                Joined Communities
+              </button>
+              <button
+                className={`profile-tab ${activeTab === 'created-communities' ? 'active' : ''}`}
+                onClick={() => setActiveTab('created-communities')}
+              >
+                Created Communities
               </button>
             </>
           )}

@@ -164,6 +164,67 @@ router.post('/:name/favorite', auth, async (req, res) => {
   }
 });
 
+// @route   GET /api/communities/:name/members
+// @desc    Get community members (creator only)
+// @access  Private
+router.get('/:name/members', auth, async (req, res) => {
+  try {
+    const community = await Community.findOne({ name: req.params.name.toLowerCase() })
+      .populate('members', 'username avatar');
+    if (!community) {
+      return res.status(404).json({ message: 'Community not found' });
+    }
+
+    if (community.creator.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to view members' });
+    }
+
+    res.json({ members: community.members || [] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   POST /api/communities/:name/members/:memberId/kick
+// @desc    Remove a member from a community (creator only)
+// @access  Private
+router.post('/:name/members/:memberId/kick', auth, async (req, res) => {
+  try {
+    const { name, memberId } = req.params;
+    const community = await Community.findOne({ name: name.toLowerCase() });
+    if (!community) {
+      return res.status(404).json({ message: 'Community not found' });
+    }
+
+    if (community.creator.toString() !== req.user.userId) {
+      return res.status(403).json({ message: 'Not authorized to remove members' });
+    }
+
+    if (community.creator.toString() === memberId) {
+      return res.status(400).json({ message: 'Creator cannot be removed' });
+    }
+
+    const isMember = community.members.some(member => member.toString() === memberId);
+    if (!isMember) {
+      return res.status(404).json({ message: 'Member not found in community' });
+    }
+
+    community.members = community.members.filter(member => member.toString() !== memberId);
+    community.memberCount = Math.max(0, community.memberCount - 1);
+    await community.save();
+
+    await User.findByIdAndUpdate(memberId, {
+      $pull: { joinedCommunities: community._id }
+    });
+
+    res.json({ message: 'Member removed' });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
 // @route   GET /api/communities/:name
 // @desc    Get community by name
 // @access  Public
@@ -186,4 +247,3 @@ router.get('/:name', async (req, res) => {
 });
 
 module.exports = router;
-

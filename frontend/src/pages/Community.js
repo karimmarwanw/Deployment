@@ -11,9 +11,13 @@ const Community = ({ user }) => {
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMember, setIsMember] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
   const [isFavorited, setIsFavorited] = useState(false);
   const [joining, setJoining] = useState(false);
   const [favoriting, setFavoriting] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [membersLoading, setMembersLoading] = useState(false);
+  const [showMembers, setShowMembers] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,6 +30,9 @@ const Community = ({ user }) => {
       setIsMember(community.members.some(m => 
         (typeof m === 'object' ? m._id : m) === user._id
       ));
+      const creatorId = community.creator?._id || community.creator;
+      const userId = user._id || user.id;
+      setIsCreator(creatorId && userId && creatorId === userId);
       checkIfFavorited();
     }
   }, [community, user]);
@@ -133,6 +140,35 @@ const Community = ({ user }) => {
     }
   };
 
+  const fetchMembers = async () => {
+    if (!isCreator) return;
+    try {
+      setMembersLoading(true);
+      const response = await axios.get(`/communities/${name}/members`);
+      setMembers(response.data.members || []);
+    } catch (error) {
+      console.error('Error fetching members:', error);
+      alert(error.response?.data?.message || 'Failed to fetch members');
+    } finally {
+      setMembersLoading(false);
+    }
+  };
+
+  const handleKickMember = async (memberId) => {
+    try {
+      await axios.post(`/communities/${name}/members/${memberId}/kick`);
+      setMembers(prev => prev.filter(member => member._id !== memberId));
+      setCommunity(prev => ({
+        ...prev,
+        memberCount: Math.max(0, (prev?.memberCount || 0) - 1),
+        members: (prev?.members || []).filter(m => (typeof m === 'object' ? m._id : m) !== memberId)
+      }));
+    } catch (error) {
+      console.error('Error removing member:', error);
+      alert(error.response?.data?.message || 'Failed to remove member');
+    }
+  };
+
   if (loading) {
     return <div className="loading">Loading community...</div>;
   }
@@ -173,6 +209,20 @@ const Community = ({ user }) => {
                 </button>
               </>
             )}
+            {user && isCreator && (
+              <button
+                className="members-button"
+                onClick={async () => {
+                  const next = !showMembers;
+                  setShowMembers(next);
+                  if (next) {
+                    await fetchMembers();
+                  }
+                }}
+              >
+                {showMembers ? 'Hide Members' : 'Manage Members'}
+              </button>
+            )}
             {user && (
               <Link to={`/r/${name}/submit`} className="create-post-button">
                 Create Post
@@ -180,6 +230,45 @@ const Community = ({ user }) => {
             )}
           </div>
         </div>
+
+        {isCreator && showMembers && (
+          <div className="community-members-panel">
+            <div className="community-members-header">
+              <h2>Members</h2>
+              <span className="community-members-count">{members.length}</span>
+            </div>
+            {membersLoading ? (
+              <div className="loading">Loading members...</div>
+            ) : members.length === 0 ? (
+              <div className="empty-state">No members found</div>
+            ) : (
+              <div className="community-members-list">
+                {members.map(member => (
+                  <div key={member._id} className="community-member-row">
+                    <div className="community-member-info">
+                      {member.avatar ? (
+                        <img src={member.avatar} alt={member.username} />
+                      ) : (
+                        <div className="member-avatar-placeholder">
+                          {(member.username || 'U')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <span>u/{member.username}</span>
+                    </div>
+                    {member._id !== (community.creator?._id || community.creator) && (
+                      <button
+                        className="kick-button"
+                        onClick={() => handleKickMember(member._id)}
+                      >
+                        Kick
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="posts-list">
           {posts.length === 0 ? (
@@ -212,4 +301,3 @@ const Community = ({ user }) => {
 };
 
 export default Community;
-

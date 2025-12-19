@@ -14,6 +14,9 @@ const PostDetail = ({ user }) => {
   const [showSummary, setShowSummary] = useState(false);
   const [summary, setSummary] = useState('');
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [showVoters, setShowVoters] = useState(false);
+  const [voters, setVoters] = useState({ upvotes: [], downvotes: [] });
+  const [loadingVoters, setLoadingVoters] = useState(false);
 
   useEffect(() => {
     fetchPost();
@@ -98,6 +101,22 @@ const PostDetail = ({ user }) => {
     }
   };
 
+  const fetchVoters = async () => {
+    try {
+      setLoadingVoters(true);
+      const response = await axios.get(`/posts/${id}/votes`);
+      setVoters({
+        upvotes: response.data.upvotes || [],
+        downvotes: response.data.downvotes || []
+      });
+    } catch (error) {
+      console.error('Error fetching voters:', error);
+      alert(error.response?.data?.message || 'Failed to fetch voters');
+    } finally {
+      setLoadingVoters(false);
+    }
+  };
+
   const getVoteStatus = () => {
     if (!user || !post) return { upvoted: false, downvoted: false };
     // Use the upvoted/downvoted fields from backend if available
@@ -117,6 +136,7 @@ const PostDetail = ({ user }) => {
 
   const voteStatus = getVoteStatus();
   const score = post.score !== undefined ? post.score : 0;
+  const isAuthor = user && (user._id || user.id) === (post.author?._id || post.author);
 
   return (
     <div className="container">
@@ -210,6 +230,31 @@ const PostDetail = ({ user }) => {
                   </>
                 )}
               </button>
+              {isAuthor && (
+                <button
+                  className="action-button"
+                  onClick={async () => {
+                    const next = !showVoters;
+                    setShowVoters(next);
+                    if (next) {
+                      await fetchVoters();
+                    }
+                  }}
+                  disabled={loadingVoters}
+                >
+                  {loadingVoters ? (
+                    <>
+                      <span className="loading-spinner">⏳</span>
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <span>👀</span>
+                      View Voters
+                    </>
+                  )}
+                </button>
+              )}
               {showSummary && summary && (
                 <>
                   <div className="ai-summary-overlay" onClick={() => setShowSummary(false)}></div>
@@ -230,6 +275,57 @@ const PostDetail = ({ user }) => {
           </div>
         </div>
 
+        {isAuthor && showVoters && (
+          <div className="post-voters-panel">
+            <div className="post-voters-header">
+              <h3>Post Votes</h3>
+              <span className="post-voters-count">
+                {voters.upvotes.length} up • {voters.downvotes.length} down
+              </span>
+            </div>
+            <div className="post-voters-columns">
+              <div className="post-voters-column">
+                <h4>Upvotes</h4>
+                {voters.upvotes.length === 0 ? (
+                  <div className="empty-state">No upvotes yet</div>
+                ) : (
+                  voters.upvotes.map(voter => (
+                    <div key={`${voter._id}-up`} className="post-voter-row">
+                      {voter.avatar ? (
+                        <img src={voter.avatar} alt={voter.username} />
+                      ) : (
+                        <div className="post-voter-avatar">
+                          {(voter.username || 'U')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <span>u/{voter.username}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="post-voters-column">
+                <h4>Downvotes</h4>
+                {voters.downvotes.length === 0 ? (
+                  <div className="empty-state">No downvotes yet</div>
+                ) : (
+                  voters.downvotes.map(voter => (
+                    <div key={`${voter._id}-down`} className="post-voter-row">
+                      {voter.avatar ? (
+                        <img src={voter.avatar} alt={voter.username} />
+                      ) : (
+                        <div className="post-voter-avatar">
+                          {(voter.username || 'U')[0].toUpperCase()}
+                        </div>
+                      )}
+                      <span>u/{voter.username}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         <CommentSection postId={id} user={user} postAuthor={post?.author} />
       </div>
     </div>
@@ -237,4 +333,3 @@ const PostDetail = ({ user }) => {
 };
 
 export default PostDetail;
-
