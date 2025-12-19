@@ -72,11 +72,17 @@ const Chats = ({ user }) => {
       forceNew: true,
       // Add unique query parameter to prevent connection reuse
       query: { timestamp: Date.now(), component: 'chats' },
-      // Don't auto-connect if auth fails
-      autoConnect: true
+      // Defer connecting to avoid StrictMode connect/disconnect noise
+      autoConnect: false
     });
 
     const socket = socketRef.current;
+    let didCancel = false;
+    const connectTimeout = setTimeout(() => {
+      if (!didCancel) {
+        socket.connect();
+      }
+    }, 0);
 
     // Socket event listeners
     socket.on('connect', () => {
@@ -219,11 +225,15 @@ const Chats = ({ user }) => {
 
     // Cleanup function: remove all listeners and disconnect
     return () => {
+      didCancel = true;
+      clearTimeout(connectTimeout);
       isConnectingRef.current = false;
       if (socketRef.current) {
         console.log('Cleaning up socket on unmount');
         socketRef.current.removeAllListeners();
-        socketRef.current.disconnect();
+        if (socketRef.current.connected || socketRef.current.active) {
+          socketRef.current.disconnect();
+        }
         socketRef.current = null;
       }
     };

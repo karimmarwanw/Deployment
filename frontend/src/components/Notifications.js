@@ -50,10 +50,17 @@ const Notifications = ({ user }) => {
       forceNew: true,
       // Add unique query parameter to prevent connection reuse
       query: { timestamp: Date.now(), component: 'notifications' },
-      autoConnect: true
+      // Defer connecting to avoid StrictMode connect/disconnect noise
+      autoConnect: false
     });
 
     const socket = socketRef.current;
+    let didCancel = false;
+    const connectTimeout = setTimeout(() => {
+      if (!didCancel) {
+        socket.connect();
+      }
+    }, 0);
 
     socket.on('connect_error', (error) => {
       console.error('Notifications socket connection error:', error);
@@ -74,9 +81,13 @@ const Notifications = ({ user }) => {
     fetchUnreadCount();
 
     return () => {
+      didCancel = true;
+      clearTimeout(connectTimeout);
       if (socketRef.current) {
         socketRef.current.removeAllListeners();
-        socketRef.current.disconnect();
+        if (socketRef.current.connected || socketRef.current.active) {
+          socketRef.current.disconnect();
+        }
         socketRef.current = null;
       }
     };
@@ -270,4 +281,3 @@ const Notifications = ({ user }) => {
 };
 
 export default Notifications;
-
