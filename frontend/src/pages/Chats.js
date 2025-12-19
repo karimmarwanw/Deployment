@@ -19,17 +19,61 @@ const Chats = ({ user }) => {
   const typingTimeoutRef = useRef(null);
   const fallbackTimeoutRef = useRef(null);
   const messageSentHandlerRef = useRef(null);
+  const selectedChatIdRef = useRef(selectedChatId);
+  const isConnectingRef = useRef(false);
 
-  // Initialize socket connection
+  // Initialize socket connection (only once when component mounts or user changes)
   useEffect(() => {
     const token = localStorage.getItem('token');
-    if (!token || !user) return;
+    if (!token || !user) {
+      // Clean up if no user/token
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      isConnectingRef.current = false;
+      return;
+    }
+
+    // Prevent duplicate connections (important for React StrictMode)
+    if (isConnectingRef.current || (socketRef.current && socketRef.current.connected)) {
+      console.log('Socket already connecting or connected, skipping...');
+      return;
+    }
+
+    // Disconnect existing socket if any (prevent duplicates)
+    if (socketRef.current) {
+      console.log('Cleaning up existing socket connection');
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
+
+    isConnectingRef.current = true;
 
     // Use environment variable or default to localhost:5001 (backend port)
     const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5001';
+    console.log('Creating new socket connection to:', socketUrl, 'with token:', token ? 'present' : 'missing');
+    
+    if (!token) {
+      console.error('Cannot create socket connection: No token found');
+      isConnectingRef.current = false;
+      return;
+    }
+    
     socketRef.current = io(socketUrl, {
       auth: { token },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      // Force new connection to prevent reusing existing connection
+      forceNew: true,
+      // Add unique query parameter to prevent connection reuse
+      query: { timestamp: Date.now(), component: 'chats' },
+      // Don't auto-connect if auth fails
+      autoConnect: true
     });
 
     const socket = socketRef.current;
@@ -37,15 +81,28 @@ const Chats = ({ user }) => {
     // Socket event listeners
     socket.on('connect', () => {
       console.log('Socket connected');
+      isConnectingRef.current = false;
     });
 
     socket.on('disconnect', () => {
       console.log('Socket disconnected');
+      isConnectingRef.current = false;
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+      isConnectingRef.current = false;
+      // Log the error but don't show alert for auth errors (user might not be logged in)
+      if (error.message && error.message.includes('Authentication')) {
+        console.warn('Socket authentication failed - user may need to log in');
+      } else {
+        console.error('Socket connection failed:', error.message);
+      }
     });
 
     socket.on('error', (error) => {
       console.error('Socket error:', error);
-      alert(error.message || 'Connection error');
+      isConnectingRef.current = false;
     });
 
     // Real-time message events
@@ -138,10 +195,11 @@ const Chats = ({ user }) => {
       console.log('Joined chat:', data.chatId);
     });
 
-    // Typing indicators
+    // Typing indicators - use ref to get current selectedChatId
     socket.on('user_typing', (data) => {
       const userId = user._id || user.id;
-      if (data.chatId === selectedChatId && data.userId !== userId) {
+      // Use ref to get current selectedChatId value
+      if (data.chatId === selectedChatIdRef.current && data.userId !== userId) {
         setTypingUsers(prev => ({
           ...prev,
           [data.userId]: data.username
@@ -150,7 +208,7 @@ const Chats = ({ user }) => {
     });
 
     socket.on('user_stop_typing', (data) => {
-      if (data.chatId === selectedChatId) {
+      if (data.chatId === selectedChatIdRef.current) {
         setTypingUsers(prev => {
           const updated = { ...prev };
           delete updated[data.userId];
@@ -159,10 +217,17 @@ const Chats = ({ user }) => {
       }
     });
 
+    // Cleanup function: remove all listeners and disconnect
     return () => {
-      socket.disconnect();
+      isConnectingRef.current = false;
+      if (socketRef.current) {
+        console.log('Cleaning up socket on unmount');
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
     };
-  }, [user, selectedChatId]);
+  }, [user]); // Only depend on user, not selectedChatId
 
   useEffect(() => {
     fetchChats();
@@ -170,6 +235,9 @@ const Chats = ({ user }) => {
   }, []);
 
   useEffect(() => {
+    // Update ref whenever selectedChatId changes
+    selectedChatIdRef.current = selectedChatId;
+    
     if (selectedChatId && socketRef.current) {
       // Join the chat room
       socketRef.current.emit('join_chat', selectedChatId);

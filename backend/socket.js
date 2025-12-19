@@ -7,10 +7,21 @@ const User = require('./models/User');
 // Socket authentication middleware
 const authenticateSocket = async (socket, next) => {
   try {
-    const token = socket.handshake.auth.token || socket.handshake.headers.authorization?.replace('Bearer ', '');
+    // Get token from auth object or headers
+    const token = socket.handshake.auth?.token || 
+                  socket.handshake.headers?.authorization?.replace('Bearer ', '') ||
+                  socket.handshake.query?.token;
     
     if (!token) {
+      console.log('Socket connection rejected: No token provided');
+      console.log('Handshake auth:', socket.handshake.auth);
+      console.log('Handshake headers:', socket.handshake.headers);
       return next(new Error('Authentication error: No token provided'));
+    }
+
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET not configured');
+      return next(new Error('Server configuration error'));
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
@@ -20,15 +31,33 @@ const authenticateSocket = async (socket, next) => {
     const user = await User.findById(decoded.userId).select('username');
     if (user) {
       socket.username = user.username;
+    } else {
+      console.warn(`User not found for socket connection: ${decoded.userId}`);
     }
     
     next();
   } catch (error) {
-    next(new Error('Authentication error: Invalid token'));
+    console.error('Socket authentication error:', error.message);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    if (error.name === 'JsonWebTokenError') {
+      return next(new Error('Authentication error: Invalid token'));
+    } else if (error.name === 'TokenExpiredError') {
+      return next(new Error('Authentication error: Token expired'));
+    }
+    return next(new Error('Authentication error: ' + error.message));
   }
 };
 
 const initializeSocket = (io) => {
+  // Handle connection errors
+  io.engine.on('connection_error', (err) => {
+    console.error('Socket.io connection error:', err);
+  });
+
   // Apply authentication middleware
   io.use(authenticateSocket);
 

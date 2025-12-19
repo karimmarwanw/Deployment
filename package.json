@@ -9,7 +9,12 @@
     "client": "cd frontend && npm start",
     "install-server": "cd backend && npm install",
     "install-client": "cd frontend && npm install",
-    "install-all": "npm run install-server && npm run install-client"
+    "install-all": "npm run install-server && npm run install-client",
+    "build": "cd frontend && npm run build",
+    "build:prod": "cd frontend && npm run build:prod",
+    "start": "cd backend && npm start",
+    "start:prod": "cd backend && npm run production",
+    "heroku-postbuild": "npm run install-all && npm run build"
   },
   "keywords": ["reddit", "clone", "mern"],
   "author": "",

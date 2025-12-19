@@ -13,17 +13,54 @@ const Notifications = ({ user }) => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
+  // Initialize socket connection (only when user changes, not when isOpen changes)
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      // Clean up if user logs out
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      return;
+    }
+
+    // Disconnect existing socket if any
+    if (socketRef.current) {
+      socketRef.current.removeAllListeners();
+      socketRef.current.disconnect();
+      socketRef.current = null;
+    }
 
     const token = localStorage.getItem('token');
+    if (!token) {
+      console.warn('Notifications: No token found, skipping socket connection');
+      return;
+    }
+    
     const socketUrl = process.env.REACT_APP_SOCKET_URL || 'http://localhost:5001';
+    console.log('Notifications: Creating socket connection to:', socketUrl, 'with token:', token ? 'present' : 'missing');
     socketRef.current = io(socketUrl, {
       auth: { token },
-      transports: ['websocket', 'polling']
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionDelay: 1000,
+      reconnectionAttempts: 5,
+      // Force new connection to prevent reusing existing connection
+      forceNew: true,
+      // Add unique query parameter to prevent connection reuse
+      query: { timestamp: Date.now(), component: 'notifications' },
+      autoConnect: true
     });
 
     const socket = socketRef.current;
+
+    socket.on('connect_error', (error) => {
+      console.error('Notifications socket connection error:', error);
+      if (error.message && error.message.includes('Authentication')) {
+        console.warn('Notifications socket authentication failed');
+      }
+    });
 
     socket.on('notification_count', (data) => {
       setUnreadCount(data.count);
@@ -35,14 +72,22 @@ const Notifications = ({ user }) => {
     });
 
     fetchUnreadCount();
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.removeAllListeners();
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+    };
+  }, [user]); // Only depend on user, not isOpen
+
+  // Fetch notifications when dropdown opens
+  useEffect(() => {
     if (isOpen) {
       fetchNotifications();
     }
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [user, isOpen]);
+  }, [isOpen]);
 
   // Close dropdown when clicking outside
   useEffect(() => {

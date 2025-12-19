@@ -179,6 +179,35 @@ reddit-clone/
 - AI summarization uses Hugging Face Router API (requires free API token)
 - All protected routes require a valid JWT token in the Authorization header
 
+## Deployment
+
+For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
+
+### Quick Deployment Steps
+
+1. **Set up environment variables** (see [ENV_EXAMPLE.md](./ENV_EXAMPLE.md))
+2. **Build the frontend:**
+   ```bash
+   npm run build
+   ```
+3. **Start production server:**
+   ```bash
+   npm run start:prod
+   ```
+
+### Docker Deployment
+
+```bash
+docker build -t reddit-clone .
+docker run -p 5001:5001 --env-file backend/.env reddit-clone
+```
+
+Or use docker-compose:
+
+```bash
+docker-compose up -d
+```
+
 ## License
 
 This project is for educational purposes.
