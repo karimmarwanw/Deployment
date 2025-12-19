@@ -4,6 +4,12 @@ FROM node:18-alpine AS builder
 # Set working directory
 WORKDIR /app
 
+# Frontend build-time env vars (passed via build args)
+ARG REACT_APP_API_URL
+ARG REACT_APP_SOCKET_URL
+ENV REACT_APP_API_URL=${REACT_APP_API_URL}
+ENV REACT_APP_SOCKET_URL=${REACT_APP_SOCKET_URL}
+
 # Copy package files
 COPY package*.json ./
 COPY frontend/package*.json ./frontend/
@@ -44,4 +50,3 @@ ENV NODE_ENV=production
 
 # Start server
 CMD ["node", "server.js"]
-

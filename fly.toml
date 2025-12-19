@@ -7,6 +7,9 @@ app = 'asupostit'
 primary_region = 'cdg'
 
 [build]
+  [build.args]
+    REACT_APP_API_URL = "https://asupostit.fly.dev/api"
+    REACT_APP_SOCKET_URL = "https://asupostit.fly.dev"
 
 [http_service]
   internal_port = 5001
