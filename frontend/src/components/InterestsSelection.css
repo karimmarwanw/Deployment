@@ -1,0 +1,130 @@
+.interests-selection {
+  padding: 24px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.interests-header {
+  margin-bottom: 20px;
+}
+
+.interests-header h2 {
+  color: var(--text-primary);
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.interests-subtitle {
+  color: var(--text-tertiary);
+  font-size: 14px;
+  margin: 0;
+}
+
+.interests-search {
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.interests-search::before {
+  content: '🔍';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  pointer-events: none;
+}
+
+.interests-search-input {
+  width: 100%;
+  padding: 12px 16px;
+  padding-left: 40px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.interests-search-input:focus {
+  outline: none;
+  border-color: var(--accent-blue);
+}
+
+.interests-selected {
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.topics-count {
+  color: var(--text-tertiary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.interests-categories {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.topic-category {
+  margin-bottom: 24px;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.category-icon {
+  font-size: 20px;
+}
+
+.topics-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.topic-tag {
+  padding: 6px 12px;
+  background-color: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.topic-tag:hover:not(.disabled):not(.selected) {
+  background-color: var(--bg-hover);
+  border-color: var(--border-hover);
+}
+
+.topic-tag.selected {
+  background-color: var(--accent-blue);
+  border-color: var(--accent-blue);
+  color: white;
+}
+
+.topic-tag.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.interests-loading {
+  text-align: center;
+  color: var(--text-tertiary);
+  padding: 40px;
+}
+
