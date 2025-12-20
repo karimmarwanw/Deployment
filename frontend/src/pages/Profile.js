@@ -18,6 +18,9 @@ const Profile = ({ user: currentUser }) => {
   const [favoriteCommunities, setFavoriteCommunities] = useState([]);
   const [joinedCommunities, setJoinedCommunities] = useState([]);
   const [createdCommunities, setCreatedCommunities] = useState([]);
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
+  const [blockedUsers, setBlockedUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ bio: '', avatar: '' });
@@ -103,6 +106,23 @@ const Profile = ({ user: currentUser }) => {
         case 'created-communities':
           const createdResponse = await axios.get(`/users/${userId}/communities/created`);
           setCreatedCommunities(createdResponse.data);
+          break;
+        case 'followers':
+          const followersResponse = await axios.get(`/users/${userId}/followers`);
+          setFollowers(followersResponse.data);
+          break;
+        case 'following':
+          const followingResponse = await axios.get(`/users/${userId}/following`);
+          setFollowing(followingResponse.data);
+          break;
+        case 'blocked':
+          const token = localStorage.getItem('token');
+          const blockedResponse = await axios.get(`/users/${userId}/blocked`, {
+            headers: {
+              Authorization: token ? `Bearer ${token}` : ''
+            }
+          });
+          setBlockedUsers(blockedResponse.data);
           break;
         default:
           break;
@@ -476,6 +496,102 @@ const Profile = ({ user: currentUser }) => {
             )}
           </div>
         );
+      case 'followers':
+        return (
+          <div className="profile-relationships">
+            <h2>Followers</h2>
+            {followers.length === 0 ? (
+              <p className="no-posts">No followers yet</p>
+            ) : (
+              <div className="relationship-list">
+                {followers.map((follower) => (
+                  <Link
+                    key={follower._id}
+                    to={`/profile/${follower._id}`}
+                    className="relationship-card"
+                  >
+                    <div className="relationship-avatar">
+                      {follower.avatar ? (
+                        <img src={follower.avatar} alt={follower.username} />
+                      ) : (
+                        <div className="relationship-placeholder">
+                          {follower.username[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="relationship-info">
+                      <h3>u/{follower.username}</h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      case 'following':
+        return (
+          <div className="profile-relationships">
+            <h2>Following</h2>
+            {following.length === 0 ? (
+              <p className="no-posts">Not following anyone yet</p>
+            ) : (
+              <div className="relationship-list">
+                {following.map((followedUser) => (
+                  <Link
+                    key={followedUser._id}
+                    to={`/profile/${followedUser._id}`}
+                    className="relationship-card"
+                  >
+                    <div className="relationship-avatar">
+                      {followedUser.avatar ? (
+                        <img src={followedUser.avatar} alt={followedUser.username} />
+                      ) : (
+                        <div className="relationship-placeholder">
+                          {followedUser.username[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="relationship-info">
+                      <h3>u/{followedUser.username}</h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      case 'blocked':
+        return (
+          <div className="profile-relationships">
+            <h2>Blocked</h2>
+            {blockedUsers.length === 0 ? (
+              <p className="no-posts">No blocked users</p>
+            ) : (
+              <div className="relationship-list">
+                {blockedUsers.map((blockedUser) => (
+                  <Link
+                    key={blockedUser._id}
+                    to={`/profile/${blockedUser._id}`}
+                    className="relationship-card"
+                  >
+                    <div className="relationship-avatar">
+                      {blockedUser.avatar ? (
+                        <img src={blockedUser.avatar} alt={blockedUser.username} />
+                      ) : (
+                        <div className="relationship-placeholder">
+                          {blockedUser.username[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className="relationship-info">
+                      <h3>u/{blockedUser.username}</h3>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
+        );
       default:
         return null;
     }
@@ -681,6 +797,24 @@ const Profile = ({ user: currentUser }) => {
           </button>
           {isOwnProfile && (
             <>
+              <button
+                className={`profile-tab ${activeTab === 'followers' ? 'active' : ''}`}
+                onClick={() => setActiveTab('followers')}
+              >
+                Followers
+              </button>
+              <button
+                className={`profile-tab ${activeTab === 'following' ? 'active' : ''}`}
+                onClick={() => setActiveTab('following')}
+              >
+                Following
+              </button>
+              <button
+                className={`profile-tab ${activeTab === 'blocked' ? 'active' : ''}`}
+                onClick={() => setActiveTab('blocked')}
+              >
+                Blocked
+              </button>
               <button
                 className={`profile-tab ${activeTab === 'saved' ? 'active' : ''}`}
                 onClick={() => setActiveTab('saved')}

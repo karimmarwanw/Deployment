@@ -273,7 +273,8 @@
 }
 
 .profile-comments h2,
-.profile-communities h2 {
+.profile-communities h2,
+.profile-relationships h2 {
   color: var(--text-primary);
   font-size: 20px;
   margin-bottom: var(--spacing-md);
@@ -324,6 +325,62 @@
 .profile-comment-meta {
   color: var(--text-tertiary);
   font-size: 12px;
+}
+
+.relationship-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--spacing-md);
+}
+
+.relationship-card {
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-md);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-md);
+  text-decoration: none;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.relationship-card:hover {
+  border-color: var(--border-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.relationship-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.relationship-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.relationship-placeholder {
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.relationship-info h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .communities-list {

@@ -4,6 +4,7 @@ const jwt = require('jsonwebtoken');
 const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const auth = require('../middleware/auth');
+const { calculateUserKarma } = require('../utils/karma');
 
 // Generate JWT Token
 const generateToken = (userId) => {
@@ -104,7 +105,7 @@ router.post('/login', [
         id: user._id,
         username: user.username,
         email: user.email,
-        karma: user.karma,
+        karma: await calculateUserKarma(user._id),
         interests: user.interests || []
       }
     });
@@ -120,7 +121,9 @@ router.post('/login', [
 router.get('/me', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.userId).select('-password');
-    res.json(user);
+    const userObj = user.toObject();
+    userObj.karma = await calculateUserKarma(user._id);
+    res.json(userObj);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -128,4 +131,3 @@ router.get('/me', auth, async (req, res) => {
 });
 
 module.exports = router;
-

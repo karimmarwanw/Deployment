@@ -54,12 +54,6 @@ const Home = ({ user }) => {
               New
             </button>
             <button
-              className={sortBy === 'hot' ? 'active' : ''}
-              onClick={() => setSortBy('hot')}
-            >
-              Hot
-            </button>
-            <button
               className={sortBy === 'top' ? 'active' : ''}
               onClick={() => setSortBy('top')}
             >
@@ -101,4 +95,3 @@ const Home = ({ user }) => {
 };
 
 export default Home;
-

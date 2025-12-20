@@ -15,6 +15,7 @@ const Community = require('../models/Community');
 const optionalAuth = require('../middleware/optionalAuth');
 const { body, validationResult } = require('express-validator');
 const { upload, uploadToCloudinary } = require('../utils/cloudinary');
+const { calculateUserKarma } = require('../utils/karma');
 
 // @route   GET /api/users/:id/comments
 // @desc    Get all comments by a user
@@ -201,6 +202,61 @@ router.get('/:id/posts/hidden', async (req, res) => {
       .sort({ createdAt: -1 });
 
     res.json(posts);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/:id/followers
+// @desc    Get followers for a user
+// @access  Public
+router.get('/:id/followers', async (req, res) => {
+  try {
+    const followers = await Following.find({ following: req.params.id })
+      .populate('follower', 'username avatar')
+      .sort({ createdAt: -1 });
+
+    const followerUsers = followers.map((entry) => entry.follower).filter(Boolean);
+    res.json(followerUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/:id/following
+// @desc    Get users this user is following
+// @access  Public
+router.get('/:id/following', async (req, res) => {
+  try {
+    const following = await Following.find({ follower: req.params.id })
+      .populate('following', 'username avatar')
+      .sort({ createdAt: -1 });
+
+    const followingUsers = following.map((entry) => entry.following).filter(Boolean);
+    res.json(followingUsers);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// @route   GET /api/users/:id/blocked
+// @desc    Get users blocked by the current user
+// @access  Private
+router.get('/:id/blocked', auth, async (req, res) => {
+  try {
+    if (req.user.userId !== req.params.id) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const blocked = await Blocking.find({ blocker: req.params.id })
+      .populate('blocked', 'username avatar')
+      .sort({ createdAt: -1 });
+
+    const blockedUsers = blocked.map((entry) => entry.blocked).filter(Boolean);
+    res.json(blockedUsers);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error' });
@@ -399,6 +455,7 @@ router.get('/:id', optionalAuth, async (req, res) => {
     const userObj = user.toObject();
     userObj.followerCount = followerCount;
     userObj.followingCount = followingCount;
+    userObj.karma = await calculateUserKarma(req.params.id);
 
     // If user is authenticated, check follow/block status
     if (req.user && req.user.userId) {

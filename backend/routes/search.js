@@ -3,6 +3,7 @@ const router = express.Router();
 const Community = require('../models/Community');
 const User = require('../models/User');
 const Post = require('../models/Post');
+const { calculateUserKarma } = require('../utils/karma');
 
 // @route   GET /api/search
 // @desc    Search for communities, users, and posts
@@ -37,9 +38,17 @@ router.get('/', async (req, res) => {
         username: { $regex: query, $options: 'i' }
       })
       .limit(10)
-      .select('username karma createdAt');
-      
-      results.users = users;
+      .select('username createdAt');
+
+      const usersWithKarma = await Promise.all(
+        users.map(async (user) => {
+          const userObj = user.toObject();
+          userObj.karma = await calculateUserKarma(user._id);
+          return userObj;
+        })
+      );
+
+      results.users = usersWithKarma;
     }
 
     if (type === 'all' || type === 'posts') {
@@ -65,4 +74,3 @@ router.get('/', async (req, res) => {
 });
 
 module.exports = router;
-
