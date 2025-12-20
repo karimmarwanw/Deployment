@@ -338,6 +338,8 @@
   gap: var(--spacing-xs);
   font-weight: 500;
   box-shadow: var(--shadow-sm);
+  opacity: 1;
+  visibility: visible;
 }
 
 .reply-button:hover {
