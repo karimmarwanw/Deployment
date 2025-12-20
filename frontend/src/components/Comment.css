@@ -324,9 +324,10 @@
   flex-wrap: wrap;
 }
 
-.reply-button {
+.comment-actions .reply-button {
   color: var(--text-primary);
   font-size: 12px;
+  line-height: 1;
   padding: 6px 10px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -336,18 +337,19 @@
   display: inline-flex;
   align-items: center;
   gap: var(--spacing-xs);
-  font-weight: 500;
+  font-weight: 600;
   box-shadow: var(--shadow-sm);
   opacity: 1;
   visibility: visible;
+  text-shadow: 0 0 0 var(--text-primary);
 }
 
-.reply-button:hover {
+.comment-actions .reply-button:hover {
   background-color: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.reply-button:focus-visible {
+.comment-actions .reply-button:focus-visible {
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
 }
