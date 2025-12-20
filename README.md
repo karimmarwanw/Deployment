@@ -16,6 +16,23 @@ A minimal Reddit clone built with the MERN stack (MongoDB, Express, React, Node.
 - ✅ Commenting on posts
 - ✅ Searching for communities and users
 
+### Social & Moderation
+- ✅ Follow/Unfollow users
+- ✅ Block/Unblock users
+- ✅ View followers, following, and blocked lists on profile
+
+### Content Management
+- ✅ Save/Unsave posts
+- ✅ Hide/Unhide posts
+- ✅ Favorite communities
+- ✅ User profile tabs for saved, hidden, upvoted, downvoted, and communities
+- ✅ Interest-based feed filtering
+
+### Messaging & Notifications
+- ✅ Real-time notifications
+- ✅ Direct messaging (chats)
+- ✅ Chat invites
+
 ### AI Integration Feature
 - ✅ AI-powered post summarization using Hugging Face (FREE)
 
@@ -45,7 +62,7 @@ A minimal Reddit clone built with the MERN stack (MongoDB, Express, React, Node.
 
 1. **Clone the repository**
    ```bash
-   cd "Cursor Reddit"
+   cd reddit-clone
    ```
 
 2. **Install dependencies**
@@ -85,7 +102,7 @@ A minimal Reddit clone built with the MERN stack (MongoDB, Express, React, Node.
    npm run dev
    ```
    
-   This will start both the backend (port 5000) and frontend (port 3000) concurrently.
+   This will start both the backend (port 5001) and frontend (port 3000) concurrently.
 
    Or run them separately:
    
@@ -112,9 +129,20 @@ reddit-clone/
 ├── backend/
 │   ├── models/
 │   │   ├── User.js
+│   │   ├── Following.js
+│   │   ├── Blocking.js
 │   │   ├── Community.js
 │   │   ├── Post.js
 │   │   └── Comment.js
+│   │   ├── Vote.js
+│   │   ├── SavedPost.js
+│   │   ├── HiddenPost.js
+│   │   ├── FavoritePost.js
+│   │   ├── FavoriteCommunity.js
+│   │   ├── Notification.js
+│   │   ├── Chat.js
+│   │   ├── ChatMessage.js
+│   │   └── ChatInvite.js
 │   ├── routes/
 │   │   ├── auth.js
 │   │   ├── users.js
@@ -122,8 +150,14 @@ reddit-clone/
 │   │   ├── posts.js
 │   │   ├── comments.js
 │   │   └── search.js
+│   │   ├── notifications.js
+│   │   ├── chats.js
+│   │   └── topics.js
 │   ├── middleware/
 │   │   └── auth.js
+│   ├── utils/
+│   │   ├── cloudinary.js
+│   │   └── karma.js
 │   ├── server.js
 │   └── package.json
 ├── frontend/
@@ -147,6 +181,20 @@ reddit-clone/
 ### Users
 - `GET /api/users/:id` - Get user profile
 - `PUT /api/users/:id` - Update user profile (protected)
+- `POST /api/users/:id/follow` - Follow a user (protected)
+- `POST /api/users/:id/unfollow` - Unfollow a user (protected)
+- `POST /api/users/:id/block` - Block a user (protected)
+- `POST /api/users/:id/unblock` - Unblock a user (protected)
+- `GET /api/users/:id/followers` - Get followers
+- `GET /api/users/:id/following` - Get following
+- `GET /api/users/:id/blocked` - Get blocked users (protected)
+- `GET /api/users/:id/posts/saved` - Get saved posts
+- `GET /api/users/:id/posts/hidden` - Get hidden posts
+- `GET /api/users/:id/posts/upvoted` - Get upvoted posts
+- `GET /api/users/:id/posts/downvoted` - Get downvoted posts
+- `GET /api/users/:id/communities/favorites` - Get favorite communities
+- `GET /api/users/:id/communities/joined` - Get joined communities
+- `GET /api/users/:id/communities/created` - Get created communities
 
 ### Communities
 - `GET /api/communities` - Get all communities
@@ -154,6 +202,7 @@ reddit-clone/
 - `POST /api/communities` - Create a community (protected)
 - `POST /api/communities/:name/join` - Join a community (protected)
 - `POST /api/communities/:name/leave` - Leave a community (protected)
+- `POST /api/communities/:name/favorite` - Toggle favorite community (protected)
 
 ### Posts
 - `GET /api/posts` - Get posts (supports query params: community, sort)
@@ -162,12 +211,37 @@ reddit-clone/
 - `POST /api/posts/:id/upvote` - Upvote a post (protected)
 - `POST /api/posts/:id/downvote` - Downvote a post (protected)
 - `POST /api/posts/:id/summarize` - Generate AI summary (protected)
+- `POST /api/posts/:id/save` - Toggle save a post (protected)
+- `POST /api/posts/:id/hide` - Toggle hide a post (protected)
 
 ### Comments
 - `GET /api/comments/post/:postId` - Get comments for a post
 - `POST /api/comments` - Create a comment (protected)
 - `POST /api/comments/:id/upvote` - Upvote a comment (protected)
 - `POST /api/comments/:id/downvote` - Downvote a comment (protected)
+
+### Notifications
+- `GET /api/notifications` - Get notifications (protected)
+- `GET /api/notifications/unread-count` - Get unread count (protected)
+- `PUT /api/notifications/:id/read` - Mark a notification as read (protected)
+- `PUT /api/notifications/read-all` - Mark all notifications as read (protected)
+- `DELETE /api/notifications/:id` - Delete a notification (protected)
+- `DELETE /api/notifications` - Delete all notifications (protected)
+
+### Chats
+- `POST /api/chats` - Create a chat (protected)
+- `POST /api/chats/:id/invite` - Invite users to a chat (protected)
+- `GET /api/chats/my` - Get user chats (protected)
+- `GET /api/chats/invites` - Get chat invites (protected)
+- `POST /api/chats/invites/:id/accept` - Accept chat invite (protected)
+- `POST /api/chats/invites/:id/reject` - Reject chat invite (protected)
+- `POST /api/chats/:id/messages` - Send a message (protected)
+- `GET /api/chats/:id/messages` - Get chat messages (protected)
+- `POST /api/chats/:id/leave` - Leave a chat (protected)
+
+### Topics
+- `GET /api/topics` - Get topic categories
+- `GET /api/topics/flat` - Get flat list of topics
 
 ### Search
 - `GET /api/search?q=query&type=all` - Search for communities, users, and posts
@@ -177,23 +251,9 @@ reddit-clone/
 - The UI is styled to closely match Reddit's dark theme
 - JWT tokens are stored in localStorage for authentication
 - AI summarization uses Hugging Face Router API (requires free API token)
+- User karma is derived from total upvotes minus total downvotes on posts and comments
 - All protected routes require a valid JWT token in the Authorization header
 
-## Deployment
-
-For detailed deployment instructions, see [DEPLOYMENT.md](./DEPLOYMENT.md).
-
-### Quick Deployment Steps
-
-1. **Set up environment variables** (see [ENV_EXAMPLE.md](./ENV_EXAMPLE.md))
-2. **Build the frontend:**
-   ```bash
-   npm run build
-   ```
-3. **Start production server:**
-   ```bash
-   npm run start:prod
-   ```
 
 ### Docker Deployment
 
@@ -211,4 +271,3 @@ docker-compose up -d
 ## License
 
 This project is for educational purposes.
-
